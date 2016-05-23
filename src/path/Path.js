@@ -2294,7 +2294,48 @@ new function() { // PostScript-style drawing commands
                     'Cannot put a curve through points with parameter = ' + t);
             this.quadraticCurveTo(handle, to);
         },
-
+        
+        arcAround: function(/* center, extent */) {
+            //Get the start point:
+            var currentSegment = getCurrentSegment(this),
+                from = currentSegment._point,
+                center = Point.read(arguments),
+                centerToFrom = from.subtract(center),
+                extent = Base.read(arguments);
+            
+            if(extent == 0 || radius == 0) return;
+            
+            var rotate = function(normal, subject){
+                // unit vectors can be used for efficient rotation
+                // this function rotates subject by the angle
+                // of normal
+                return new Point(
+                    normal.x*subject.x - normal.y*subject.y,
+                    normal.y*subject.x + normal.x*subject.y );
+            };
+            var turnClockwise = function(p){
+                return new Point(p.y, -p.x);
+            };
+            
+            var absExt = Math.abs(extent),
+                count = absExt >= 360 ? 4 : Math.ceil(absExt / 90),
+                directionSign = extent/Math.abs(extent),
+                rotationIncrement = new Point({length: 1, angle: extent/count}),
+                currentPoint = centerToFrom,
+                handleNorm = turnClockwise(centerToFrom).multiply(
+                    directionSign,
+                    //magic number here derives from http://stackoverflow.com/questions/1734745/how-to-create-circle-with-b%C3%A9zier-curves
+                    (4/3)*Math.tan((Math.PI*extent)/(720*count)) );
+            
+            for (var i = 0; i < count; i++) {
+                currentSegment.setHandleOut(handleNorm);
+                handleNorm = rotate(rotationIncrement, handleNorm);
+                currentSegment = new Segment(currentPoint.add(center), handleNorm.multiply(-1));
+                this.add(currentSegment);
+                currentPoint = rotate(rotationIncrement, currentPoint);
+            }
+        },
+        
         arcTo: function(/* to, clockwise | through, to
                 | to, radius, rotation, clockwise, large */) {
             // Get the start point:
