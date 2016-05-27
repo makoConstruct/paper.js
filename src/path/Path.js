@@ -2303,7 +2303,7 @@ new function() { // PostScript-style drawing commands
                 centerToFrom = from.subtract(center),
                 extent = Base.read(arguments);
             
-            if(extent == 0 || radius == 0) return;
+            if(extent == 0 || (from.x==center.x && from.y==center.y)) return;
             
             var rotate = function(normal, subject){
                 // unit vectors can be used for efficient rotation
@@ -2313,27 +2313,34 @@ new function() { // PostScript-style drawing commands
                     normal.x*subject.x - normal.y*subject.y,
                     normal.y*subject.x + normal.x*subject.y );
             };
-            var turnClockwise = function(p){
-                return new Point(p.y, -p.x);
+            var turn90DegsClockwise = function(p){
+                return new Point(-p.y, p.x);
             };
             
-            var absExt = Math.abs(extent),
-                count = absExt >= 360 ? 4 : Math.ceil(absExt / 90),
-                directionSign = extent/Math.abs(extent),
-                rotationIncrement = new Point({length: 1, angle: extent/count}),
+            var absExtent = Math.abs(extent),
+                directionSign = extent/absExtent,
+                ext = absExtent > 360 ? 360*directionSign : extent,
+                absExt = Math.abs(ext),
+                count = Math.ceil(absExt / 90),
+                rotationIncrement = new Point({length: 1, angle: ext/count}),
                 currentPoint = centerToFrom,
-                handleNorm = turnClockwise(centerToFrom).multiply(
-                    directionSign,
+                // define the bezier handle vector as a vect
+                // orthogonal to the point radiating from the center,
+                // scaled by a bezier circle approximation constant
+                bezierHandle = turn90DegsClockwise(centerToFrom).multiply(
                     //magic number here derives from http://stackoverflow.com/questions/1734745/how-to-create-circle-with-b%C3%A9zier-curves
-                    (4/3)*Math.tan((Math.PI*extent)/(720*count)) );
+                    (4/3)*Math.tan((Math.PI*ext)/(720*count)) );
             
+            var segments = []
             for (var i = 0; i < count; i++) {
-                currentSegment.setHandleOut(handleNorm);
-                handleNorm = rotate(rotationIncrement, handleNorm);
-                currentSegment = new Segment(currentPoint.add(center), handleNorm.multiply(-1));
-                this.add(currentSegment);
+                currentSegment.setHandleOut(bezierHandle);
+                bezierHandle = rotate(rotationIncrement, bezierHandle);
                 currentPoint = rotate(rotationIncrement, currentPoint);
+                currentSegment = new Segment(currentPoint.add(center), bezierHandle.multiply(-1));
+                segments.push(currentSegment);
             }
+            // Adding all at once has higher performance, according to arcTo
+            this._add(segments)
         },
         
         arcTo: function(/* to, clockwise | through, to
