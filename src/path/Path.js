@@ -2331,7 +2331,7 @@ new function() { // PostScript-style drawing commands
                     //magic number here derives from http://stackoverflow.com/questions/1734745/how-to-create-circle-with-b%C3%A9zier-curves
                     (4/3)*Math.tan((Math.PI*ext)/(720*count)) );
             
-            var segments = []
+            var segments = [];
             for (var i = 0; i < count; i++) {
                 currentSegment.setHandleOut(bezierHandle);
                 bezierHandle = rotate(rotationIncrement, bezierHandle);
@@ -2340,7 +2340,7 @@ new function() { // PostScript-style drawing commands
                 segments.push(currentSegment);
             }
             // Adding all at once has higher performance, according to arcTo
-            this._add(segments)
+            this._add(segments);
         },
         
         arcTo: function(/* to, clockwise | through, to
